@@ -117,100 +117,85 @@
 <script src="https://cloudflare.com"></script>
 <script src="https://cloudflare.com"></script>
 
-<script>
-    // 2. Wait until both the Scratch game loops and Firebase modules finish downloading
-    window.addEventListener('load', function() {
-        
-        // 3. PASTE YOUR ACTUAL FIREBASE CREDS HERE FROM THE FIREBASE CONSOLE
-        const firebaseConfig = {
-            apiKey: "AIzaSyCUBpc_1cxIeet0howHuy2RerJwtbRhZmk",
-            authDomain: "my-comments-app.firebaseapp.com",
-            projectId: "my-comments-app",
-            storageBucket: "my-comments-app.firebasestorage.app",
-            messagingSenderId: "694570623032",
-            appId: "1:694570623032:web:0e402c54fa49a7f9eec6cd"
-        };
+<script type="module">
+    // 2. We import specific functions directly from Google's servers. 
+    // This completely removes the old broken "firebase." prefix format.
+    import { initializeApp } from "https://gstatic.com";
+    import { 
+        getFirestore, 
+        collection, 
+        addDoc, 
+        onSnapshot, 
+        query, 
+        orderBy 
+    } from "https://gstatic.com";
 
-        // Initialize Firebase on the global browser scope
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+    // 3. Paste YOUR real keys here from your Firebase Console
+    const firebaseConfig = {
+        apiKey: "AIzaSyCUBpc_1cxIeet0howHuy2RerJwtbRhZmk",
+        authDomain: "my-comments-app.firebaseapp.com",
+        projectId: "my-comments-app",
+        storageBucket: "my-comments-app.firebasestorage.app",
+        messagingSenderId: "694570623032",
+        appId: "1:694570623032:web:0e402c54fa49a7f9eec6cd"
 
-        // Connect to your HTML Form Elements
-        const usernameInput = document.getElementById('usernameInput');
-        const commentInput = document.getElementById('commentInput');
-        const submitBtn = document.getElementById('submitBtn');
-        const commentList = document.getElementById('commentList');
+    };
 
-        // 4. Save comments to the SHARED CLOUD DATABASE
-        submitBtn.addEventListener('click', function() {
-            const username = usernameInput.value.trim();
-            const commentText = commentInput.value.trim();
+    // 4. Initialize Firebase safely using the modern syntax
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-            if (username === "" || commentText === "") {
-                alert("Please fill out both fields!");
-                return;
-            }
+    // Connect to your HTML input elements
+    const usernameInput = document.getElementById('usernameInput');
+    const commentInput = document.getElementById('commentInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const commentList = document.getElementById('commentList');
 
-            // This pushes the data directly to Google's servers
-            db.collection("comments").add({
+    // 5. Save comments globally to the cloud database
+    submitBtn.addEventListener('click', async function() {
+        const username = usernameInput.value.trim();
+        const commentText = commentInput.value.trim();
+
+        if (username === "" || commentText === "") {
+            alert("Please fill out both your name and comment text!");
+            return;
+        }
+
+        try {
+            // Adds the text document directly to the cloud collection
+            await addDoc(collection(db, "comments"), {
                 name: username,
                 text: commentText,
                 timestamp: Date.now()
-            })
-            .then(() => {
-                commentInput.value = ""; // Clear box on success
-            })
-            .catch((error) => {
-                console.error("Database connection failure:", error);
             });
-        });
 
-        // 5. Read ALL comments from ALL users in Real Time
-        // onSnapshot monitors the database cloud. If User A posts, User B sees it immediately.
-        db.collection("comments").orderBy("timestamp", "desc")
-        .onSnapshot((snapshot) => {
-            commentList.innerHTML = ""; // Clear previous elements
+            // Clear comment text box on success
+            commentInput.value = "";
+        } catch (error) {
+            console.error("Cloud saving error: ", error);
+        }
+    });
 
-            snapshot.forEach((docSnap) => {
-                const commentData = docSnap.data();
-                const commentId = docSnap.id;
-                const dateText = new Date(commentData.timestamp).toLocaleString();
+    // 6. Read and sync all comments globally for all users in real time
+    const q = query(collection(db, "comments"), orderBy("timestamp", "desc"));
 
-                // Create the visible comment container layout
-                const commentDiv = document.createElement('div');
-                commentDiv.classList.add('comment-item');
+    onSnapshot(q, (snapshot) => {
+        commentList.innerHTML = ""; // Clear list wrapper to reset UI layout
 
-                const nameDiv = document.createElement('div');
-                nameDiv.classList.add('comment-username');
-                nameDiv.style.fontWeight = 'bold';
-                nameDiv.textContent = commentData.name;
-                commentDiv.appendChild(nameDiv);
+        snapshot.forEach((docSnap) => {
+            const commentData = docSnap.data();
+            const dateText = new Date(commentData.timestamp).toLocaleString();
 
-                const textPara = document.createElement('p');
-                textPara.classList.add('comment-text');
-                textPara.textContent = commentData.text;
-                commentDiv.appendChild(textPara);
+            const commentDiv = document.createElement('div');
+            commentDiv.classList.add('comment-item');
 
-                const timeDiv = document.createElement('div');
-                timeDiv.classList.add('comment-time');
-                timeDiv.style.fontSize = '0.8rem';
-                timeDiv.style.color = '#777';
-                timeDiv.textContent = `Posted on: ${dateText}`;
-                commentDiv.appendChild(timeDiv);
+            commentDiv.innerHTML = `
+                <div class="comment-username" style="font-weight: bold;">${commentData.name}</div>
+                <p class="comment-text" style="margin: 5px 0;">${commentData.text}</p>
+                <div class="comment-time" style="font-size: 0.8rem; color: #777;">Posted: ${dateText}</div>
+            `;
 
-                // Add a Delete Button
-                const deleteBtn = document.createElement('button');
-                deleteBtn.classList.add('delete-btn');
-                deleteBtn.textContent = 'Delete';
-                
-                deleteBtn.addEventListener('click', function() {
-                    if (confirm("Are you sure you want to delete this public comment?")) {
-                        db.collection("comments").doc(commentId).delete();
-                    }
-                });
-                commentDiv.appendChild(deleteBtn);
-                commentList.appendChild(commentDiv);
-            });
+            commentList.appendChild(commentDiv);
         });
     });
 </script>
