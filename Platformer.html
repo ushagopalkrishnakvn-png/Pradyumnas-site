@@ -120,7 +120,7 @@
 <script type="module">
     // 2. We import specific functions directly from Google's servers. 
     // This completely removes the old broken "firebase." prefix format.
-    import { initializeApp } from "https://jsdelivr.net";
+    import { initializeApp } from "https://gstatic.com";
 import { 
     getFirestore, 
     collection, 
@@ -128,7 +128,7 @@ import {
     onSnapshot, 
     query, 
     orderBy 
-} from "https://jsdelivr.net";
+} from "https://gstatic.com";
     // 3. Paste YOUR real keys here from your Firebase Console
     const firebaseConfig = {
         apiKey: "AIzaSyCUBpc_1cxIeet0howHuy2RerJwtbRhZmk",
